@@ -173,9 +173,6 @@
             border-radius: 8px;
             height: 200px;
             background-color: #1a1a1a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             border: 1px solid #333;
             transition: transform 0.3s ease;
         }
@@ -184,10 +181,25 @@
             transform: scale(1.03);
         }
 
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .photo-item:hover img {
+            transform: scale(1.1);
+        }
+
         .photo-placeholder {
             color: #666;
             text-align: center;
             padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
         }
 
         .members-list {
@@ -439,35 +451,9 @@
             <h2 data-lang="ru">Галерея клана</h2>
             <h2 data-lang="en" style="display: none;">Clan Gallery</h2>
             <h2 data-lang="es" style="display: none;">Galería del clan</h2>
-            <div class="gallery">
-                <div class="photo-item">
-                    <div class="photo-placeholder">
-                        <p data-lang="ru">Совместное фото клана</p>
-                        <p data-lang="en" style="display: none;">Clan group photo</p>
-                        <p data-lang="es" style="display: none;">Foto grupal del clan</p>
-                    </div>
-                </div>
-                <div class="photo-item">
-                    <div class="photo-placeholder">
-                        <p data-lang="ru">Скриншот победы в матче</p>
-                        <p data-lang="en" style="display: none;">Match victory screenshot</p>
-                        <p data-lang="es" style="display: none;">Captura de victoria</p>
-                    </div>
-                </div>
-                <div class="photo-item">
-                    <div class="photo-placeholder">
-                        <p data-lang="ru">Групповое фото участников</p>
-                        <p data-lang="en" style="display: none;">Members group photo</p>
-                        <p data-lang="es" style="display: none;">Foto de miembros</p>
-                    </div>
-                </div>
-                <div class="photo-item">
-                    <div class="photo-placeholder">
-                        <p data-lang="ru">Моменты из игры</p>
-                        <p data-lang="en" style="display: none;">Game moments</p>
-                        <p data-lang="es" style="display: none;">Momentos del juego</p>
-                    </div>
-                </div>
+            
+            <div class="gallery" id="photoGallery">
+                <!-- Фотографии будут загружаться автоматически из GitHub -->
             </div>
         </section>
 
@@ -685,6 +671,75 @@
             });
             const activeSection = document.getElementById(sectionId);
             activeSection.classList.add('active');
+            
+            // Если открываем галерею, загружаем фотографии
+            if (sectionId === 'gallery') {
+                loadGalleryImages();
+            }
+        }
+
+        // Функция для загрузки изображений из GitHub
+        async function loadGalleryImages() {
+            const gallery = document.getElementById('photoGallery');
+            
+            try {
+                // GitHub API для получения списка файлов в папке images
+                const response = await fetch('https://api.github.com/repos/raffalskaya/Game/contents/images');
+                
+                if (!response.ok) {
+                    throw new Error('Папка images не найдена');
+                }
+                
+                const files = await response.json();
+                
+                gallery.innerHTML = '';
+                
+                // Проверяем что files - массив
+                if (Array.isArray(files)) {
+                    files.forEach(file => {
+                        if (file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                            // Создаем URL для raw изображения из GitHub
+                            const imageUrl = `https://raw.githubusercontent.com/raffalskaya/Game/main/images/${file.name}`;
+                            
+                            const photoItem = document.createElement('div');
+                            photoItem.className = 'photo-item';
+                            photoItem.innerHTML = `
+                                <img src="${imageUrl}" alt="${file.name}" loading="lazy">
+                            `;
+                            gallery.appendChild(photoItem);
+                        }
+                    });
+                }
+                
+                // Если нет изображений, показываем сообщение
+                if (gallery.children.length === 0) {
+                    showNoPhotosMessage(gallery);
+                }
+                
+            } catch (error) {
+                console.error('Ошибка загрузки галереи:', error);
+                showNoPhotosMessage(gallery);
+            }
+        }
+
+        // Функция для показа сообщения об отсутствии фото
+        function showNoPhotosMessage(gallery) {
+            gallery.innerHTML = `
+                <div class="photo-item">
+                    <div class="photo-placeholder">
+                        <p data-lang="ru">Пока нет фотографий</p>
+                        <p data-lang="en" style="display: none;">No photos yet</p>
+                        <p data-lang="es" style="display: none;">Aún no hay fotos</p>
+                    </div>
+                </div>
+            `;
+            // Применяем текущий язык к сообщению
+            languages.forEach(lang => {
+                const elements = gallery.querySelectorAll(`[data-lang="${lang}"]`);
+                elements.forEach(el => {
+                    el.style.display = lang === currentLanguage ? 'block' : 'none';
+                });
+            });
         }
 
         // Навигация
@@ -700,6 +755,11 @@
 
             // Показываем текущий URL сайта
             document.getElementById('siteUrl').textContent = window.location.href;
+            
+            // Загружаем галерею при первой загрузке если открыта эта секция
+            if (document.getElementById('gallery').classList.contains('active')) {
+                loadGalleryImages();
+            }
         });
 
         // Функция для копирования ссылки на сайт
@@ -713,19 +773,6 @@
                 };
                 alert(messages[currentLanguage]);
             });
-        }
-
-        // Функция для добавления фотографий в галерею
-        function addPhotoToGallery(imageUrl, description) {
-            const gallery = document.querySelector('.gallery');
-            const photoItem = document.createElement('div');
-            photoItem.className = 'photo-item';
-            photoItem.innerHTML = `
-                <div class="photo-placeholder">
-                    <p>${description}</p>
-                </div>
-            `;
-            gallery.appendChild(photoItem);
         }
     </script>
 </body>
